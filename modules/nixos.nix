@@ -37,7 +37,7 @@
   ...
 }:
 let
-  cfg = config.services.nixpower;
+  cfg = config.nixpower;
 
   # PCI IDs are matched as udev ATTR strings ("0x73bf"), not integers.
   #
@@ -61,7 +61,7 @@ let
   sleepServices = sleepUnits.services;
 in
 {
-  options.services.nixpower = {
+  options.nixpower = {
     enable = lib.mkEnableOption "nixpower: one declarative power stance for this host";
 
     sleep = {
@@ -250,7 +250,7 @@ in
     assertions = [
       {
         assertion = cfg.sleep.allowed || cfg.sleep.reason != "";
-        message = "services.nixpower.sleep.allowed = false requires sleep.reason (why this host must not sleep).";
+        message = "nixpower.sleep.allowed = false requires sleep.reason (why this host must not sleep).";
       }
     ];
 

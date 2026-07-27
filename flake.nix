@@ -16,7 +16,7 @@
 
     # ── system-manager (Arch and other non-NixOS hosts) ───────────────────────────────────────
     # The SLEEP half only, with a deliberately identical option surface
-    # (`services.nixpower.sleep.{allowed,reason}`) so a host reads the same on either manager.
+    # (`nixpower.sleep.{allowed,reason}`) so a host reads the same on either manager.
     #
     # Only the sleep half, because the rest of the NixOS module emits udev rules and kernel
     # parameters that a system-manager host either cannot set or should not: such a host usually

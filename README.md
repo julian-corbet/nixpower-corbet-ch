@@ -34,7 +34,7 @@ mechanisms at one knob is the exact failure this project exists to prevent.
 ## Usage
 
 ```nix
-services.nixpower = {
+nixpower = {
   enable = true;
   sleep.allowed = false;
   sleep.reason = "always-on hub; its GPU has never survived an s2idle resume";

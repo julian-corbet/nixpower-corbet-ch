@@ -26,7 +26,7 @@ let
         options.assertions = lib.mkOption { type = lib.types.listOf lib.types.attrs; default = [ ]; };
       }
       {
-        services.nixpower.sleep = {
+        nixpower.sleep = {
           allowed = false;
           reason = "smoke test";
           maskSysfs = true;
