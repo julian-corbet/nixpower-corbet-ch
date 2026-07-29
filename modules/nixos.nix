@@ -49,6 +49,18 @@ let
   # USB-C function came back at "auto" despite this rule matching, runtime-suspended
   # ~7 s later, and the controller died on the D3 resume. "bind" fires after the
   # driver has had its say, so the pin is re-asserted where it actually sticks.
+  #
+  # "bind" IS STILL NOT ENOUGH FOR EVERY DRIVER, which is why nixpower-runtime-pm-assert
+  # exists below. The bind uevent is emitted when probe() RETURNS -- a driver that finishes
+  # its setup asynchronously after that point gets the last word anyway. snd_hda_intel is
+  # exactly that shape: with power_save non-zero it calls pm_runtime_allow() from its
+  # deferred probe continuation, well after bind, and the device lands back at "auto".
+  # Observed 2026-07-29 on an AMD Navi HDMI/DP audio function (0x1002:0xab28), which sat at
+  # "auto" and runtime-suspended across every boot while this rule matched it correctly and
+  # the verifier reported a failure it could not explain. There is no udev action that fires
+  # "after the driver is really done", so the pin has to be re-asserted once from a unit
+  # ordered late in the boot. A write at that point sticks -- confirmed by hand on the same
+  # device: still "on", still runtime-active, long after the driver had settled.
   keepPoweredRules = lib.concatMapStringsSep "\n" (d: ''
     # ${d.reason}
     ACTION=="add|bind", SUBSYSTEM=="pci", ATTR{vendor}=="${d.vendor}", ATTR{device}=="${d.device}", ATTR{power/control}="on"'') cfg.runtimePm.keepPowered;
@@ -316,10 +328,52 @@ in
       '';
     };
 
+    # The udev rules above are the fast path and the ONLY path for a device hotplugged later;
+    # this unit is the backstop for drivers that finish initialising after their bind uevent and
+    # hand power/control back to runtime PM (see the keepPoweredRules note). It runs once, late,
+    # when every driver has settled.
+    #
+    # It re-asserts rather than reconciles: no timer, no watch. A device that flips back to "auto"
+    # after this point is a new fact about that driver, and nixpower-verify -- ordered after this
+    # unit -- is what reports it. Papering over that with a polling loop would hide the one signal
+    # worth having.
+    systemd.services.nixpower-runtime-pm-assert = lib.mkIf (cfg.runtimePm.keepPowered != [ ]) {
+      description = "nixpower: re-assert power/control=on for keepPowered devices once drivers have settled";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+      script = ''
+        set -uo pipefail   # no -e: an absent device is data, not an engine crash
+
+        ${lib.concatMapStringsSep "\n" (d: ''
+          # ${d.reason}
+          for p in /sys/bus/pci/devices/*; do
+            if [ "$(cat "$p/vendor" 2>/dev/null)" = "${d.vendor}" ] && [ "$(cat "$p/device" 2>/dev/null)" = "${d.device}" ]; then
+              if [ ! -w "$p/power/control" ]; then
+                echo "SKIP  ${d.vendor}:${d.device}: $p/power/control not writable"
+                continue
+              fi
+              was="$(cat "$p/power/control" 2>/dev/null)"
+              if [ "$was" = "on" ]; then
+                echo "OK    ${d.vendor}:${d.device} already on ($p)"
+              elif echo on > "$p/power/control"; then
+                echo "SET   ${d.vendor}:${d.device} was '$was', now '$(cat "$p/power/control" 2>/dev/null)' ($p) -- a driver had handed it back to runtime PM"
+              else
+                echo "FAIL  ${d.vendor}:${d.device}: write to $p/power/control rejected"
+              fi
+            fi
+          done
+        '') cfg.runtimePm.keepPowered}
+      '';
+    };
+
     systemd.services.nixpower-verify = lib.mkIf cfg.verify.enable {
       description = "nixpower: read every managed power knob back and report what actually took";
       wantedBy = [ "multi-user.target" ];
-      after = [ "multi-user.target" ];
+      after = [ "multi-user.target" ] ++ lib.optional (cfg.runtimePm.keepPowered != [ ]) "nixpower-runtime-pm-assert.service";
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
@@ -382,7 +436,13 @@ in
         '') cfg.runtimePm.keepPowered}
 
         if [ "$fail" -ne 0 ]; then
-          echo "nixpower-verify: at least one knob did not take. The setting was requested correctly and the kernel declined it -- see the FAIL lines above."
+          # NOT "the kernel declined it" -- that phrasing sent an investigation down the wrong
+          # path for three days. sysfs almost never rejects these writes; it accepts them and
+          # something overwrites the value afterwards. The common causes, in order of likelihood:
+          # a driver re-enabling runtime PM from its own probe (what nixpower-runtime-pm-assert
+          # exists to undo), another config on the host writing the same knob, or the attribute
+          # not existing in the shape this host's kernel exposes.
+          echo "nixpower-verify: at least one knob did not take -- see the FAIL lines above. A write sysfs ACCEPTED can still be overwritten later; check what else on this host touches that attribute before concluding the hardware refused it."
           exit 1
         fi
         echo "nixpower-verify: every managed knob verified against sysfs."
