@@ -1,6 +1,6 @@
 #
-# nixpower's sleep stance, for system-manager hosts (Arch/CachyOS), mirroring the NixOS module in
-# modules/nixos/services/hardware/nixpower.nix.
+# nixpower's sleep stance, for system-manager hosts (Arch/CachyOS), mirroring this repo's own
+# NixOS module (`modules/nixos.nix`).
 #
 # WHY A SECOND IMPLEMENTATION AND NOT AN IMPORT: the NixOS module expresses masking through
 # `systemd.units.<name>.enable = false`, which system-manager does not implement. The OPTION SURFACE

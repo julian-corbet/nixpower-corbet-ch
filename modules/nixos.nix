@@ -1,9 +1,9 @@
-# modules/nixos/services/hardware/nixpower.nix
+# modules/nixos.nix
 #
-# ONE declarative power stance per host. Written 2026-07-26, replacing
-# services/hardware/runtime-pm.nix, whose rules moved here verbatim (same
-# udev text, same reasoning -- see git history of that file for the original
-# powertop audit that produced them).
+# ONE declarative power stance per host. Written 2026-07-26, replacing a private, per-host
+# runtime-PM module of this operator's own, whose rules moved here verbatim (same udev text,
+# same reasoning -- see this operator's own private history for the original powertop audit
+# that produced them).
 #
 # WHY a module and not more per-host lines: the 2026-07-24 amdgpu incident
 # was not caused by a missing knob. Every individual knob on the host
@@ -19,17 +19,18 @@
 # SCOPE -- what this module owns, so no knob has two managers:
 #   OWNED : system sleep policy, PCI/USB/SCSI runtime PM, CPU EPP, PCIe ASPM,
 #           SATA ALPM, dirty-writeback interval, device coredumps.
-#   NOT   : ATA standby timers for rotational drives -- services/hardware/
-#           disk-standby.nix owns those; they are storage policy that happens
+#   NOT   : ATA standby timers for rotational drives -- this repo's own
+#           `modules/disk-standby.nix` owns those; they are storage policy that happens
 #           to save power, keyed off queue/rotational and the USB exclusion.
 #   NOT   : a laptop. It is an Arch box driven by system-manager with a
 #           pacman-owned TLP (its own TLP config). TLP manages EPP,
 #           ASPM and spindown itself; pointing this module at the same knobs
-#           would be exactly the two-mechanisms-one-knob fight that runtime-
-#           pm.nix was written to avoid. Laptop power stays TLP's.
+#           would be exactly the two-mechanisms-one-knob fight the private, per-host
+#           runtime-PM module this repo replaces was written to avoid. Laptop power stays TLP's.
 #
-# Self-contained on purpose (no infra-local imports, no fleet.* reads) so it
-# can be lifted into a public `nixpower` flake unchanged when that lands.
+# Self-contained on purpose (no infra-local imports, no reads from this operator's own private
+# per-host option namespace) so it can be lifted into a public `nixpower` flake unchanged when
+# that lands.
 {
   config,
   lib,
