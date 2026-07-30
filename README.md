@@ -31,6 +31,34 @@ The system-manager backend is deliberately *not* the whole module. A non-NixOS h
 distro power daemon (TLP and friends) already managing EPP, ASPM and spindown, and pointing two
 mechanisms at one knob is the exact failure this project exists to prevent.
 
+## `nixpower.diskStandby` — ATA standby spin-down, its own module
+
+`nixosModules.diskStandby` (`modules/disk-standby.nix`) spins down idle rotational drives via the
+ATA standby timer (`hdparm -S`), entirely in hardware — no daemon, no polling, resets on any
+access. A blanket udev rule matches every internal (non-USB) block device reporting
+`queue/rotational=1`; SSD/NVMe are excluded by the query itself. `apmLevel` (`hdparm -B`) is a
+separate, optional knob for drives whose Advanced Power Management is unloading heads far more
+often than the standby timer alone would suggest. `staggerGroups` renders a oneshot that wakes a
+named set of devices in sequence rather than all at once, for wiring into another unit's
+`wants`/`after` (a predictable nightly job, say) — it is not inrush protection, which this module
+deliberately does not attempt (see the module's own header for why).
+
+Kept **separate** from `nixosModules.nixpower` on purpose, not merged in: ATA standby timers are
+storage policy that happens to save power, keyed off `queue/rotational` and the USB exclusion —
+not the system-wide sleep/runtime-PM stance the main module owns. A host that wants both imports
+both; `nixpower`'s own module header says so explicitly, so the boundary can't be re-blurred by
+someone reaching for "just add it here" later.
+
+```nix
+nixpower.diskStandby = {
+  enable = true;
+  timeoutMinutes = 30;
+  apmLevel = 254; # only if Load_Cycle_Count is climbing — see the option's own description
+};
+```
+
+NixOS only — no system-manager backend exists for this module.
+
 ## Usage
 
 ```nix
