@@ -32,13 +32,13 @@
     nixosModules.diskStandby = ./modules/disk-standby.nix;
 
     # ── system-manager (Arch and other non-NixOS hosts) ───────────────────────────────────────
-    # The SLEEP half only, with a deliberately identical option surface
+    # The sleep half plus native package intent, with a deliberately identical sleep option surface
     # (`nixpower.sleep.{allowed,reason}`) so a host reads the same on either manager.
     #
     # Only the sleep half, because the rest of the NixOS module emits udev rules and kernel
-    # parameters that a system-manager host either cannot set or should not: such a host usually
-    # has a distro power daemon (TLP and friends) already managing EPP/ASPM/spindown, and pointing
-    # two mechanisms at one knob is the failure this module exists to prevent.
+    # parameters that a system-manager host either cannot set or should not. It publishes native
+    # package intent for the distro power daemon and diagnostics, but never configures their knobs:
+    # pointing two mechanisms at one knob is the failure this module exists to prevent.
     #
     # It also carries `sleep.maskSysfs`, which has no NixOS equivalent: mounting a read-only tmpfs
     # over /sys/power. That is only meaningful where /sys is the HOST's sysfs rather than the
@@ -58,6 +58,7 @@
         inherit lib nixpkgs system;
         nixpowerModule = self.nixosModules.nixpower;
         diskStandbyModule = self.nixosModules.diskStandby;
+        systemManagerModule = self.systemManagerModules.nixpower;
       });
 
     formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.nixpkgs-fmt);

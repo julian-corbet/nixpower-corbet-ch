@@ -12,7 +12,7 @@
 #   the stagger-group systemd services) -- each proven in both directions
 #   where the module has a real fires/doesn't-fire boundary (a type
 #   constraint, a conditional RUN+= line), not just "it evaluates".
-{ pkgs, lib, nixpkgs, system, nixpowerModule, diskStandbyModule }:
+{ pkgs, lib, nixpkgs, system, nixpowerModule, diskStandbyModule, systemManagerModule }:
 
 let
   host = lib.nixosSystem {
@@ -175,4 +175,7 @@ let
 in
 {
   inherit modules-evaluate eval-tests;
+  system-manager-package-contract = import ./system-manager.nix {
+    inherit pkgs lib systemManagerModule;
+  };
 }

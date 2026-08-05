@@ -21,15 +21,17 @@ the mismatch between the two layers is now an explicit eval-time warning.
 | Module | For | Owns |
 |---|---|---|
 | `nixosModules.nixpower` | NixOS | sleep policy, PCI/USB/SCSI runtime PM, CPU EPP, PCIe ASPM, SATA ALPM, dirty-writeback, coredumps, `nixpower-verify` |
-| `systemManagerModules.nixpower` | Arch / non-NixOS via [system-manager][sm] | the sleep half only, same option surface, plus `sleep.maskSysfs` |
+| `systemManagerModules.nixpower` | Arch / non-NixOS via [system-manager][sm] | sleep policy, plus native TLP/diagnostic package intent |
 
 Same option names on both, so a host reads identically whichever manager drives it. Only the
 mechanism differs: NixOS masks with `systemd.units.<name>.enable = false`, system-manager with a
 tmpfiles `L+` symlink to `/dev/null` — which is what `systemctl mask` does anyway.
 
-The system-manager backend is deliberately *not* the whole module. A non-NixOS host usually has a
-distro power daemon (TLP and friends) already managing EPP, ASPM and spindown, and pointing two
-mechanisms at one knob is the exact failure this project exists to prevent.
+The system-manager backend deliberately does not configure CPU, ASPM, runtime-PM, or storage knobs.
+A non-NixOS host usually has a distro power daemon (TLP and friends) already managing them, and
+pointing two mechanisms at one knob is the exact failure this project exists to prevent. It can
+publish `nixpower.archPackages` for that daemon and its diagnostics; the host's package reconciler
+installs those native packages.
 
 ## `nixpower.diskStandby` — ATA standby spin-down, its own module
 

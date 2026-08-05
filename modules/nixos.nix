@@ -184,39 +184,14 @@ in
     };
 
     ## ── Diagnostics. One option per tool, each named for what it answers ──────
-    ## Deliberately NOT a single `tools.enable`: a host that wants drive counters
-    ## should not silently acquire a Seagate firmware utility, and "which tool is
-    ## on this box, and why" should be readable from the host file. Anything
-    ## BMC-shaped (ipmitool) lives in nixbmc, not here -- see nixbmc.nix.
+    ## Deliberately NOT a single `tools.enable`: a host should not silently
+    ## acquire a Seagate firmware utility. Storage-inspection CLIs
+    ## (smartmontools, hdparm) belong to nixfs; BMC-shaped tools live in nixbmc.
 
     powertop.enable = lib.mkOption {
       type = lib.types.bool;
       default = false;
       description = "powertop: the periodic audit that finds knobs this module isn't managing yet. The tool that produced this host's original tuning list.";
-    };
-
-    smartmontools.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = ''
-        smartmontools: Start_Stop_Count and Load_Cycle_Count are the only honest
-        evidence of whether a spin-down policy saves power or just grinds drives.
-        This is the tool that showed the host's SMR archives were unloading
-        heads 15-21x/hour at their rated limit. Ships the CLI only -- smartd is a
-        separate decision, and a polling daemon on a box that spins drives down
-        deserves its own argument.
-      '';
-    };
-
-    hdparm.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = ''
-        hdparm CLI in PATH, for reading/setting the standby timer (-S), APM level
-        (-B) and current power state (-C) by hand. Note that disk-standby.nix does
-        NOT depend on this: its udev rules reference the hdparm store path directly,
-        so the declarative spin-down policy works whether or not this is on.
-      '';
     };
 
     lmSensors.enable = lib.mkOption {
@@ -302,8 +277,6 @@ in
 
     environment.systemPackages =
       lib.optional cfg.powertop.enable pkgs.powertop
-      ++ lib.optional cfg.smartmontools.enable pkgs.smartmontools
-      ++ lib.optional cfg.hdparm.enable pkgs.hdparm
       ++ lib.optional cfg.lmSensors.enable pkgs.lm_sensors
       ++ lib.optional cfg.openseachest.enable pkgs.openseachest;
 
