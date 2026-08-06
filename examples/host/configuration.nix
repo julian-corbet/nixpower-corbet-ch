@@ -24,6 +24,7 @@
     ];
 
     cpu.energyPerformancePreference = "balance_power";
+    cpupower.enable = true;
     pcie.aspmPolicy = "powersave";
     sata.alpmPolicy = "med_power_with_dipm";
     writebackCentisecs = 1500;

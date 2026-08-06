@@ -194,6 +194,12 @@ in
       description = "powertop: the periodic audit that finds knobs this module isn't managing yet. The tool that produced this host's original tuning list.";
     };
 
+    cpupower.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "cpupower: read-only CPU-frequency and policy diagnostics. nixpower never enables its policy-writing service, so it cannot race this module's own CPU stance.";
+    };
+
     lmSensors.enable = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -277,6 +283,7 @@ in
 
     environment.systemPackages =
       lib.optional cfg.powertop.enable pkgs.powertop
+      ++ lib.optional cfg.cpupower.enable config.boot.kernelPackages.cpupower
       ++ lib.optional cfg.lmSensors.enable pkgs.lm_sensors
       ++ lib.optional cfg.openseachest.enable pkgs.openseachest;
 

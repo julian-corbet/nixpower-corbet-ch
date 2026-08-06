@@ -70,6 +70,10 @@ let
         && lib.hasInfix ''ENV{ID_BUS}!="usb"'' udevRules)
       "expected the generated udev rule to gate on queue/rotational==1 and exclude USB, but one or both were missing")
 
+    (check "nixos/cpupower-is-an-explicit-read-only-diagnostic"
+      (lib.elem host.config.boot.kernelPackages.cpupower host.config.environment.systemPackages)
+      "expected nixpower.cpupower.enable to add cpupower to the NixOS system package set")
+
     # --- timeoutMinutes=30 (1800s, over the 1200s/240-step boundary) encodes to the 30-min-step
     # form: 240 + (30/30) = 241 -- proves the encoding helper actually ran, not just "some -S flag
     # is present".
