@@ -218,6 +218,33 @@ in
       '';
     };
 
+    ## ── Controls. A knob a PERSON turns, not a policy this module writes ──────
+
+    brightnessctl.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        brightnessctl: set the panel backlight (and any other LED class device) from a
+        script or a keybind.
+
+        A POWER KNOB, WHICH IS WHY IT IS HERE RATHER THAN IN A DESKTOP LAYER. The backlight
+        is usually the single largest draw on a laptop, and `/sys/class/backlight` is the
+        same sysfs surface every other option in this module writes -- it is display POWER,
+        not desktop furniture. What makes it its own option rather than part of the stance
+        above is the direction of control: everything else here states a policy the machine
+        then holds, while this installs a tool a human drives interactively. nixpower never
+        invokes it and never writes a brightness level; a host that enables this gets the
+        binary and decides for itself what calls it.
+
+        NO NixOS OPTION SHADOWS THIS, checked rather than assumed: `hardware.brightnessctl`
+        used to exist and was REMOVED from nixpkgs, its own removal notice saying that newer
+        versions no longer need the udev rules it installed (they go through logind's D-Bus
+        interface for a seated session) and that the package in `environment.systemPackages`
+        is now the whole answer. So on this plane the package IS the mechanism, which is why
+        it is installed directly below rather than routed through an option.
+      '';
+    };
+
     verify.enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -285,7 +312,8 @@ in
       lib.optional cfg.powertop.enable pkgs.powertop
       ++ lib.optional cfg.cpupower.enable config.boot.kernelPackages.cpupower
       ++ lib.optional cfg.lmSensors.enable pkgs.lm_sensors
-      ++ lib.optional cfg.openseachest.enable pkgs.openseachest;
+      ++ lib.optional cfg.openseachest.enable pkgs.openseachest
+      ++ lib.optional cfg.brightnessctl.enable pkgs.brightnessctl;
 
     systemd.services.nixpower-coredumps = lib.mkIf (!cfg.deviceCoredumps) {
       description = "nixpower: disable kernel device coredumps";

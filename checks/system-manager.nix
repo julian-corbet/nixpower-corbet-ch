@@ -35,7 +35,16 @@ let
       tlpRdw.enable = true;
       powertop.enable = true;
       cpupower.enable = true;
+      brightnessctl.enable = true;
     };
+  };
+
+  # brightnessctl is the one entry here that is neither a power daemon nor its diagnostic, so it
+  # gets its own fixture: nothing else in this module must arrive with it, and it must not arrive
+  # with anything else. A single all-on fixture proves the union and would happily pass if the
+  # entry were accidentally attached to `powertop.enable`.
+  brightnessOnly = evaluate {
+    nixpower.brightnessctl.enable = true;
   };
 
   invalidRdw = evaluate {
@@ -45,8 +54,13 @@ let
   checks = [
     {
       name = "system-manager/native-package-output";
-      ok = configured.nixpower.archPackages == [ "tlp" "tlp-rdw" "powertop" "cpupower" ];
-      detail = "expected the selected native package list to contain TLP, TLP-RDW, powertop, and cpupower in deterministic order";
+      ok = configured.nixpower.archPackages == [ "tlp" "tlp-rdw" "powertop" "cpupower" "brightnessctl" ];
+      detail = "expected the selected native package list to contain TLP, TLP-RDW, powertop, cpupower, and brightnessctl in deterministic order";
+    }
+    {
+      name = "system-manager/brightnessctl-is-independent";
+      ok = brightnessOnly.nixpower.archPackages == [ "brightnessctl" ];
+      detail = "expected a host that asks only for the backlight control to get exactly that, with no TLP, powertop or cpupower riding along";
     }
     {
       name = "system-manager/cpupower-service-stays-disabled";

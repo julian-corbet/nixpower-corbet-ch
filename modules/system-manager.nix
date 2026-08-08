@@ -89,6 +89,27 @@ in
       '';
     };
 
+    brightnessctl.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        brightnessctl: set the panel backlight (and any other LED class device) from a script or a
+        keybind. Same option name and same meaning as this repo's NixOS module, so a host reads
+        identically on either manager -- see that module for the full account of why a backlight
+        control belongs to the power layer at all (it is display POWER, on the same
+        `/sys/class/backlight` surface every other knob here writes, not desktop furniture) and of
+        the removed `hardware.brightnessctl` NixOS option that would otherwise shadow it there.
+
+        THE ONE ENTRY IN THIS MODULE'S PACKAGE INTENT THAT IS NOT A POWER DAEMON OR ITS DIAGNOSTIC,
+        and the distinction is worth keeping straight: TLP writes policy the machine then holds,
+        powertop and cpupower report on it, and this is a tool a HUMAN drives. It therefore cannot
+        race TLP the way a second policy engine would -- there is no `SOUND_POWER_SAVE`-shaped knob
+        two components could disagree about, only a value someone asked for. nixpower never invokes
+        it; what calls it (a compositor keybind, an OSD daemon, a script) is the host's own business
+        and deliberately not this module's.
+      '';
+    };
+
     archPackages = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       readOnly = true;
@@ -119,6 +140,10 @@ in
         ++ lib.optional cfg.tlpRdw.enable "tlp-rdw"
         ++ lib.optional cfg.powertop.enable "powertop"
         ++ lib.optional cfg.cpupower.enable "cpupower"
+        # `brightnessctl`, official-repo upstream Arch (`extra`), so it goes to the pacman half of
+        # a consumer's reconciler like every other name here -- verified on two live CachyOS hosts
+        # and against archlinux.org, with the AUR carrying nothing by that name.
+        ++ lib.optional cfg.brightnessctl.enable "brightnessctl"
       );
     }
 
